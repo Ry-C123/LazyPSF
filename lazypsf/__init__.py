@@ -1,1 +1,1 @@
-import lazy_psf
+import lazypsf
