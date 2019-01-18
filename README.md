@@ -1,3 +1,6 @@
+[![DOI](https://zenodo.org/badge/165706403.svg)](https://zenodo.org/badge/latestdoi/165706403)
+
+
 # LazyPSF 
 
 Lazy PSF is a tool to inject fake stars into a photometric image.
