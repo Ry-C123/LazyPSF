@@ -8,7 +8,11 @@ Lazy PSF is a tool to inject fake stars into a photometric image.
 pip install lazypsf
 ~~~~~~~~~~~~~~~~~~~~
 
-See tutorial 
+To get to grips with how to use lazypsf [See tutorial](https://github.com/ryanc123/LazyPSF/blob/master/Tutorial/lzypsf_tut.ipynb)
+
+---
+
+
 
 ### TO DO
 
