@@ -27,6 +27,9 @@ Will model flux distribution from a given image and then return random fluxes fr
 ![In_flux_dist](https://github.com/ryanc123/LazyPSF/blob/master/Tutorial/hist1.png)  ![Out_flux](https://github.com/ryanc123/LazyPSF/blob/master/Tutorial/hist2.png)
 
 
+or a uniform distribution across mgnitudes
+
+![Mag_dist](https://github.com/ryanc123/LazyPSF/blob/master/Tutorial/hist3.png)
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Ryan Cutter 
