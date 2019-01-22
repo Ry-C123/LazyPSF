@@ -1,9 +1,7 @@
 ### Basic usage
 
-get_dist
+get_flux_dist(fits file name) 
 
-zp_dist
+zp_dist(bright_limit_magnitude, faint_limit_mgnitude, zero point)
 
-inject
-
-show how they work, make notebook
+inject(fits file name, number of injected sources, psf model, ...)
