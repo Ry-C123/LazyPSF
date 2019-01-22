@@ -1,5 +1,4 @@
-Numpy
-Astropy
-Sextractor
-PSFex
-...
+Numpy > 1.15.2
+Astropy > 3.0.2
+Sextractor > 2.19.5
+PSFex > 3.17.1
