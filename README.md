@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/165706403.svg)](https://zenodo.org/badge/latestdoi/165706403)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2548023.svg)](https://doi.org/10.5281/zenodo.2548023)
 
 
 # LazyPSF 
