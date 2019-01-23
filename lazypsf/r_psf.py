@@ -525,12 +525,13 @@ def get_flux_dist(image):
 
     return(dist)
     
-def zp_dist(mag_l, mag_u, zp):
+def mag_dist(mag_l, mag_u, exp_time=30, pix_size=1.24):
     """
     Ryan Cutter 2019
     
     This function creates a uniform distribution 
-    based on the mag limits and given zero_point
+    based on the mag limits and given
+    exposure time(s) and pixel size(mm)
     Where mag_l is fainter:     mag_l > mag_u
 
     Good for retrival efficacy.
@@ -538,17 +539,18 @@ def zp_dist(mag_l, mag_u, zp):
     ----------
     flux distribution params
     """
-    ### using m = -2.5log_10(F/zp)
-    ### 10**(-(m/2.5))=F/zp
-    ### F = 10**(-(m/2.5))/zp
+    ### using m - m_0 = -2.5log_10(P * exp_time * pix_size/F_0)
+    ### m_0 = 0
+    ### P = 10**(-mag/2.5) * exp_time * (pix_size)**2 * 8.79*10**9
 
     #print(F_u, F_l)
-    mag_step = (mag_u - mag_l)/20.
-    dist = np.zeros((20,2))
-    for i in range(20):
+    pix_size = pix_size*10**-3
+    mag_step = (mag_u - mag_l)/50.
+    dist = np.zeros((50,2))
+    for i in range(50):
         mag = mag_l+mag_step*i
-        dist[i][0] = 1./20.
-        dist[i][1] = 10**(-(mag/2.5))/zp
+        dist[i][0] = 1./50.
+        dist[i][1] = 10**(-mag/2.5) * 8.79*10**9 / (exp_time * pix_size)
 
     return(dist)
 
@@ -560,8 +562,8 @@ def sample_flux(dist):
 
 
     Takes the distribtuion and selects a random value
-    from that distribution 
- 
+    from that distribution.
+
     returns
     -----------
     integer flux value
@@ -573,12 +575,17 @@ def sample_flux(dist):
     for i in range(len(dist)):
         LIST1.append(dist[i][0])
         LIST2.append(dist[i][1])
-    flux_dist = LIST2[1] - LIST2[0]
+
 
     TMP = np.random.choice(len(dist), p=LIST1)
-    random_flux = int(np.random.uniform(LIST2[TMP], LIST2[TMP]+flux_dist))
+    try:
+        flux_step = LIST2[TMP+1] - LIST2[TMP]
+    except:
+        flux_step = LIST2[TMP] - LIST2[TMP-1]
 
+    random_flux = int(np.random.uniform(LIST2[TMP], LIST2[TMP]+flux_step))
     return(random_flux)
+
 
 
 
@@ -676,25 +683,26 @@ def inject(image, n_stars, PSF_mod, out_name='inject.fits', flux_dist = 9000, ch
     return(None)
 
 
-def write_mag(zp):
+def write_mag(exp_time=30, pix_size=1.24):
     """
     Ryan Cutter 2019
 
 
     Takes the written flux catalog and will
     convert flux to instrumental mag,using
-    zp
+    conditions set before.
 
     --------
     re-writes catalog 
     """
 
-
+    pix_size = pix_size*10**-3
+    C =  8.79*10**9 / (exp_time * pix_size)
     new_cat = open('mags.cat', 'w')
     for lin in open('injection.cat', 'r'):
         tmp = lin.split()
         FL = float(tmp[2])
-        MAG = -2.5*math.log10(FL/zp)
+        MAG = -2.5*math.log10(FL/C)
         new_cat.write(tmp[0]+' '+tmp[1]+' '+tmp[2]+' '+str(MAG)+'\n')
 
     print('Catalog format:')
