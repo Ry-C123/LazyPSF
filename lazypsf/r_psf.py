@@ -538,9 +538,9 @@ def zp_dist(mag_l, mag_u, zp):
     ----------
     flux distribution params
     """
-    ### using m = -2.5log_10(zp/F)
-    ### 10**(-(m/2.5))=zp/F
-    ### F = zp/10**(-(m/2.5))
+    ### using m = -2.5log_10(F/zp)
+    ### 10**(-(m/2.5))=F/zp
+    ### F = 10**(-(m/2.5))/zp
 
     #print(F_u, F_l)
     mag_step = (mag_u - mag_l)/20.
@@ -548,7 +548,7 @@ def zp_dist(mag_l, mag_u, zp):
     for i in range(20):
         mag = mag_l+mag_step*i
         dist[i][0] = 1./20.
-        dist[i][1] = zp/10**(-(mag/2.5))
+        dist[i][1] = 10**(-(mag/2.5))/zp
 
     return(dist)
 
@@ -694,7 +694,7 @@ def write_mag(zp):
     for lin in open('injection.cat', 'r'):
         tmp = lin.split()
         FL = float(tmp[2])
-        MAG = -2.5*math.log10(zp/FL)
+        MAG = -2.5*math.log10(FL/zp)
         new_cat.write(tmp[0]+' '+tmp[1]+' '+tmp[2]+' '+str(MAG)+'\n')
 
     print('Catalog format:')
