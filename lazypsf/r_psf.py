@@ -706,7 +706,7 @@ def write_mag(exp_time=30, pix_size=1.24):
         new_cat.write(tmp[0]+' '+tmp[1]+' '+tmp[2]+' '+str(MAG)+'\n')
 
     print('Catalog format:')
-    print('X, Y, Flux, Mag')
+    print('Y, X, Flux, Mag')
     
     subprocess.call(['rm','injection.cat'])
     return(None)
