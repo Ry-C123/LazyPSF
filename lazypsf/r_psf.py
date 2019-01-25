@@ -426,7 +426,7 @@ def inject_fake_source(flux, image_dat, PSF_mod, X, Y, FWHM = 0, ELON=0, Theta =
     if X > X_M or Y > Y_M:
         raise ValueError('Injection out of bounds')
 
-    CUT = cut(image_dat, (Y, X), (cut_size, cut_size))
+    CUT = cut(image_dat, (X, Y), (cut_size, cut_size))
 
     L_bx = round(cut_size/2)
     L_by = round(cut_size/2) #expected cut out lengths above centre point
@@ -631,8 +631,8 @@ def inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat, chop_x = 3,
         else:
             flux = sample_flux(flux_dist)
  
-        X_in = np.random.randint(0, X_s)
-        Y_in = np.random.randint(0, Y_s)
+        X_in = np.random.randint(80, X_s-80)
+        Y_in = np.random.randint(80, Y_s-80)
 
         if PSF_mod == 0:
             for i in range(chop_x):
@@ -706,7 +706,7 @@ def write_mag(exp_time=30, pix_size=1.24):
         new_cat.write(tmp[0]+' '+tmp[1]+' '+tmp[2]+' '+str(MAG)+'\n')
 
     print('Catalog format:')
-    print('Y, X, Flux, Mag')
+    print('X, Y, Flux, Mag')
     
     subprocess.call(['rm','injection.cat'])
     return(None)
