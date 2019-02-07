@@ -18,7 +18,7 @@ To get to grips with how to use lazypsf [See tutorial](https://github.com/ryanc1
 
 Will inject sources using a variety of methods:
 
-
+![PSF_MODELS](https://github.com/ryanc123/LazyPSF/blob/master/Tutorial/PSF_MODEL_COLOUR.png)
 
 
 
