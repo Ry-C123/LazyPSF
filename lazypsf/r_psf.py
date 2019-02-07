@@ -1,8 +1,12 @@
 import subprocess
 import random
+from math import factorial as fct
+from math import atan2
 import math
 import itertools
 import os
+from multiprocessing import Pool
+from multiprocessing import cpu_count
 
 from astropy.nddata.utils import Cutout2D as cut
 from astropy.io import fits
@@ -29,6 +33,191 @@ except:
 
 root_config = os.path.dirname(os.path.realpath(__file__))+'/config' #path to config files
 
+
+
+
+def get_med_pos(image):
+    """
+    Ryan Cutter 2019
+ 
+    Finds the median FWHM and extracts the co-ords 
+    of that source. 
+    """
+    talk = [sex ,image,'-c',root_config+'/r_psf.sex' , '-CATALOG_NAME' , 'r.cat',
+            '-PARAMETERS_NAME', root_config+'/r_psf.param',
+            '-FILTER_NAME', root_config+'/r_psf.conv'
+            ]
+    print('Making PSF cat')
+    subprocess.call(talk, stderr=subprocess.DEVNULL)
+    FWHM = []
+    X = []
+    Y = []
+    for lin in open('r.cat', 'r'):
+        tmp = lin.split()
+        if float(tmp[2]) > 0:
+            FWHM.append(float(tmp[2]))
+            X.append(float(tmp[0]))
+            Y.append(float(tmp[1]))
+    F = np.median(FWHM) #pull out the most representitive FWHM
+    FG = [abs(i - F) for i in FWHM]
+    index_min = np.argmin(FG)
+   
+    subprocess.call(['rm', 'r.cat'])
+ 
+    return(X[index_min], Y[index_min])
+
+
+
+def getpolar(theta):
+    """
+    Computes polar co-ords
+    """
+    x = np.cos(theta)
+    y = np.sin(theta)
+    return 1.*x+1.j*y
+
+
+
+def zernike_poly(Y,X,n,l):
+    """
+    Computes the Zernike polynomial
+    for order n
+    """
+    y,x = Y[0],X[0]
+    poly = np.zeros(Y.size, dtype=complex)
+    index = 0
+    for x,y in zip(X,Y):
+        Vnl = 0.
+        for m in range(int((n-l)//2)+1):
+            Vnl += (-1.)**m * fct(n-m) /  \
+                   (fct(m) * fct((n - 2*m + l) // 2) * fct((n - 2*m - l) // 2) ) * \
+                   (np.sqrt(x**2 + y**2)**(n - 2*m) * getpolar(l*atan2(y,x)))
+        poly[index] = Vnl
+        index = index + 1
+    return poly
+
+
+
+
+def speedyboi(n, Yn, Xn, frac_center, npix): #A parallel part to speed things up
+ STACK = 0
+ for l in range(n+1):
+  if (n-l)%2 == 0:
+     poly = zernike_poly(Yn, Xn, float(n), float(l))
+     A = sum(frac_center * np.conjugate(poly)) * (n + 1)/npix
+     STACK += A * poly
+
+ return STACK
+
+
+
+import matplotlib.pyplot as plt
+
+def zernike_reconstruct(img, radius, D, cof):
+    """
+    Ryan Cutter 2019
+
+    Reproduces the input image using Zernkie 
+    polynomials and Zernike moments
+    
+    SK Hwang, WY Kim - Pattern Recognition, 2006
+    """
+    idx = np.ones(img.shape)
+    cofy,cofx = cof
+    cofy = float(cofy)
+    cofx = float(cofx)
+    radius = float(radius)
+
+    Y,X = np.where(idx > 0)
+    P = img[Y,X].ravel()
+    Yn = ((Y -cofy)/radius).ravel()
+    Xn = ((X -cofx)/radius).ravel()
+
+    k = (np.sqrt(Xn**2 + Yn**2) <= 1.)
+    frac_center = np.array(P[k], np.double)
+    Yn = Yn[k]
+    Xn = Xn[k]
+    frac_center = frac_center.ravel()
+
+    # in the discrete case, the normalization factor is not pi but the number of pixels within the unit disk
+    npix = float(frac_center.size)
+
+    reconstr = np.zeros(img.size, dtype=complex)
+    stack = np.zeros(Yn.size, dtype=complex)
+
+
+
+    if cpu_count() < 500:
+        for n in range(D+1):
+            for l in range(n+1):
+                if (n-l)%2 == 0:
+                   # get the zernike polynomial
+                   poly = zernike_poly(Yn, Xn, float(n), float(l))
+                   # project the image onto the polynomial and calculate the moment
+                   A = sum(frac_center * np.conjugate(poly)) * (n + 1)/npix
+                   # reconstruct
+                   stack += A * poly
+
+    else:
+        print('parallel using ' + str(cpu_count())+' cores')
+        constants = [Yn, Xn, frac_center, npix]
+        p = Pool(cpu_count())
+        Array = p.starmap(speedyboi, [([N] + constants) for N in range(D+1)])
+        p.close()
+        stack = np.sum(Array)
+
+
+    reconstr[k] = stack
+    return reconstr
+
+
+
+def ZM_PSF(im_name, cut_size=50):
+    """
+    Ryan Cutter 2019
+
+    Using Zernike moments finds
+    the median PSF for an image
+
+    returns PSF kernel
+    """
+    X, Y = get_med_pos(im_name)
+    image_dat = fits.getdata(im_name)
+    D = 34
+    img = cut(image_dat, (X, Y), (cut_size, cut_size)).data # convert image to 8-bit grayscale
+
+    rows, cols = img.shape
+
+    radius = cols//2 if rows > cols else rows//2
+    
+    reconst = zernike_reconstruct(img, radius, D, (rows/2., cols/2.))
+    reconst = np.real(reconst.reshape(img.shape))
+    
+
+    CUT = cut(reconst, (int(img.shape[1]/2), int(img.shape[0]/2)), (20,20))
+    TMP = CUT.data
+    x, y = (TMP < 3*np.amax(TMP)/4.).nonzero()
+    TMP[x,y] = 0
+    PSF = np.zeros(reconst.shape)
+    PSF[int(img.shape[1]/2)-10:int(img.shape[1]/2)+10  , int(img.shape[0]/2)-10:int(img.shape[0]/2)+10] = TMP
+    PSF = PSF/np.sum(PSF)
+    ##plt.imshow(PSF)
+    ##plt.show()
+
+    return(PSF)
+
+def ZM_inj(PSF, flux, data):
+    """
+    Ryan Cutter 2019
+
+    Returns the fake source data from a given PSF and flux
+    """
+    out_dat = data
+    for i in range(len(data)):
+        for j in range(len(data[1])):
+            out_dat[i][j] += (PSF[i][j]*flux)
+
+    return(out_dat)
 
 def FWHM_shape(cat, im_dat, chop_x= 3, chop_y= 3):
     """
@@ -216,7 +405,6 @@ def PSF_kern(image, chunk=50):
                 x_n = x
                 y_n = y
 
-            #noise = int(np.random.normal(M_dat, std_dat))
             kern[X_m+int(round(x_n))][Y_m+int(round(y_n))] = WEIGHTS[k]
 
     subprocess.call(['rm', 'r.cat'])
@@ -325,7 +513,7 @@ def psf_map(dat, header, const, xl, yl, xc, yc, slices):
     ind = [slice(int(ycenter_fft-psf_hsize), int(ycenter_fft+psf_hsize+1)),
            slice(int(xcenter_fft-psf_hsize), int(xcenter_fft+psf_hsize+1))]
 
-    psf_centre[ind] = psf_resized_norm
+    psf_centre[tuple(ind)] = psf_resized_norm
     return(psf_centre)
 
 def PSF_kern2(image, clean_psf = 0.25):
@@ -393,7 +581,7 @@ def psfex_source_model(flux, dat, header, const, xc, yc, DATA):
     ind = [slice(int(ycenter_fft-psf_hsize), int(ycenter_fft+psf_hsize+1)),
            slice(int(xcenter_fft-psf_hsize), int(xcenter_fft+psf_hsize+1))]
 
-    psf_centre[ind] = psf_resized_norm
+    psf_centre[tuple(ind)] = psf_resized_norm
     out_dat = np.zeros((psf_centre.shape[0], psf_centre.shape[1]))    
 
     if psf_centre.shape != DATA.shape:
@@ -410,7 +598,7 @@ def psfex_source_model(flux, dat, header, const, xc, yc, DATA):
 
     return(out_dat)
 
-def inject_fake_source(flux, image_dat, PSF_mod, X, Y, FWHM = 0, ELON=0, Theta = 0, cut_size=50, PSF_dat = 0):
+def inject_fake_source(flux, image_dat, PSF_mod, X, Y, FWHM = 0, ELON=0, Theta = 0, cut_size=80, PSF_dat = 0):
     """
     Ryan Cutter 2019
 
@@ -422,7 +610,7 @@ def inject_fake_source(flux, image_dat, PSF_mod, X, Y, FWHM = 0, ELON=0, Theta =
     -----------
     Data object with injected source
     """
-    X_M, Y_M = image_dat.shape #Maximum points in data
+    Y_M, X_M = image_dat.shape #Maximum points in data
     if X > X_M or Y > Y_M:
         raise ValueError('Injection out of bounds')
 
@@ -449,12 +637,14 @@ def inject_fake_source(flux, image_dat, PSF_mod, X, Y, FWHM = 0, ELON=0, Theta =
 
     if PSF_mod == 1:
         out_data = psfex_source_model(flux, PSF_dat[0], PSF_dat[1], 0.005 , X, Y, CUT.data)
-    else:
+    elif PSF_mod == 0:
         out_data = source_model([L_bx, L_by, L_tx, L_ty],flux, FWHM, CUT.data, ELON, Theta)
+    elif PSF_mod == 2:
+        out_data = ZM_inj(PSF_dat, flux, CUT.data)
 
-    fits.writeto('test.fits', out_data, overwrite = True)
+    #fits.writeto('test.fits', out_data, overwrite = True)
 
-    image_dat[X - L_bx: X + L_tx, Y - L_by: Y + L_ty] = out_data
+    image_dat[Y - L_by: Y + L_ty, X - L_bx: X + L_tx] = out_data
     #fits.writeto('test2.fits', image_dat, overwrite=True)
     return(image_dat)
 
@@ -604,14 +794,17 @@ def inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat, chop_x = 3,
 
 
     image_dat = fits.getdata(image)
-    X_s, Y_s = image_dat.shape #data shape
+    Y_s, X_s = image_dat.shape #data shape
     if write_cat == True:
         CAT = open('injection.cat', 'w')
 
     if PSF_mod == 1:
         PSF_dat = get_psf(image)
 
-    if PSF_mod == 0:
+    elif PSF_mod == 2:
+        PSF_dat = ZM_PSF(image)
+
+    elif PSF_mod == 0:
         talk = [sex ,image,'-c',root_config+'/r_psf.sex' , '-CATALOG_NAME' , 'r.cat',
                 '-PARAMETERS_NAME', root_config+'/r_psf.param', 
                 '-FILTER_NAME', root_config+'/r_psf.conv'
@@ -659,8 +852,15 @@ def inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat, chop_x = 3,
             if write_cat == True:
                 CAT.write(str(X_in) + ' ' + str(Y_in) + ' ' + str(flux) +' \n')
 
+
+        elif PSF_mod == 2:
+            image_dat = inject_fake_source(flux, image_dat, PSF_mod, X_in, Y_in,
+                                            PSF_dat = PSF_dat, cut_size=50)
+            if write_cat == True:
+                CAT.write(str(X_in) + ' ' + str(Y_in) + ' ' + str(flux) +' \n')
+
         else:
-            raise ValueError('Only two models \n PSF_mod = 0, basic bivariate Guassian \n PSF_mod = 1, PSFex model')
+            raise ValueError('Only three models \n PSF_mod = 0, basic bivariate Guassian \n PSF_mod = 1, PSFex model \n PSF_mod = 3, Zernike Moments model')
 
     return(image_dat)
 	
@@ -670,8 +870,9 @@ def inject(image, n_stars, PSF_mod, out_name='inject.fits', flux_dist = 9000, ch
     Ryan Cutter 2019
 
     Takes a fits file and injects n_stars into it
-    Uses either: bivariate guassian (PSF_mod = 0)
-                 psfex model        (PSF_mod = 1)
+    Uses either: bivariate guassian     (PSF_mod = 0)
+                 psfex model            (PSF_mod = 1)
+                 Zernkie moments model  (PSF_mod = 3)
     """
     if PSF_mod == 0:
         image_dat = inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat, chop_x, chop_y)
