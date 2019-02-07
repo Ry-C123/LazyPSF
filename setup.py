@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='lazypsf',
-      version='1.0.5',
+      version='2.0.0',
       description='A code for modelling PSFs and injecting fake sources with given flux distributions',
       url= 'https://github.com/ryanc123/LazyPSF' ,
       author='Ryan Cutter',
