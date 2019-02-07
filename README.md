@@ -1,6 +1,5 @@
-![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2559167.svg)](https://doi.org/10.5281/zenodo.2559167)
 
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2559167.svg)](https://doi.org/10.5281/zenodo.2559167)
 # LazyPSF 
 
 Lazy PSF is a python tool to inject fake stars into a photometric image.
