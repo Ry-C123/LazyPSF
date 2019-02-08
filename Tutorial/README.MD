@@ -2,7 +2,7 @@
 
 get_flux_dist(fits file name) 
 
-mag_dist(bright_limit_magnitude, faint_limit_mgnitude, exposure time (seconds), pixel size(mm))
+mag_dist(bright_limit_magnitude, faint_limit_mgnitude, exposure time (seconds), pixel scale)
 
 ### Main Function
 
