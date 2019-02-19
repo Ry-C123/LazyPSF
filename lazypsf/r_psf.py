@@ -12,6 +12,7 @@ from astropy.nddata.utils import Cutout2D as cut
 from astropy.io import fits
 import numpy as np
 from scipy import ndimage
+import sep
 #import matplotlib.pyplot as plt
 try:
     import pyfftw.interfaces.numpy_fft as fft
@@ -34,6 +35,13 @@ except:
 root_config = os.path.dirname(os.path.realpath(__file__))+'/config' #path to config files
 
 
+def add_noise(image):
+    print('Making noise ♫')
+    N_b = np.random.normal(45, 5, (image.shape[0], image.shape[1]))#background subtraction uncertainty
+    N_d = np.random.normal(25, 4, (image.shape[0], image.shape[1])) #dark noise (thermal)
+    N_r = np.random.randint(12,21, (image.shape[0], image.shape[1]))#Readout noise
+    N_p = np.sqrt(N_b + N_d + N_r)#Photon noise of noise
+    return(N_p + N_b + N_d + N_r)
 
 
 def get_med_pos(image):
@@ -147,7 +155,7 @@ def zernike_reconstruct(img, radius, D, cof):
 
 
 
-    if cpu_count() < 500:
+    if cpu_count() < 500000:  #This is Broken!
         for n in range(D+1):
             for l in range(n+1):
                 if (n-l)%2 == 0:
@@ -745,7 +753,6 @@ def mag_dist(mag_l, mag_u, exp_time=30, pix_size=1.24):
     return(dist)
 
 
-
 def sample_flux(dist):
     """
     Ryan Cutter 2019
@@ -778,8 +785,24 @@ def sample_flux(dist):
 
 
 
+def get_grid_pos(n_stars, stars, X_s, Y_s):
+    """
+    Ryan Cutter 2019
 
-def inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat, chop_x = 3, chop_y = 3):
+    Returns injection co-ords for grid injections
+    """
+    X_sli = math.ceil((stars+1)/np.sqrt(n_stars))
+    if stars+1 > np.sqrt(n_stars):
+        Y_sli = stars+1 - ((X_sli-1)*np.sqrt(n_stars))
+    else:
+        Y_sli = stars+1
+    #print(X_sli, Y_sli, stars+1).
+    X_in = int(X_s/(2*np.sqrt(n_stars)) + X_s*(X_sli-1)/(np.sqrt(n_stars)))
+    Y_in = int(Y_s/(2*np.sqrt(n_stars)) + Y_s*(Y_sli-1)/(np.sqrt(n_stars)))
+    return(X_in, Y_in)
+
+
+def inject_fake_stars(image, n_stars, grid, flux_dist, PSF_mod, write_cat, x_p, y_p, chop_x = 3, chop_y = 3):
     """
     Ryan Cutter 2019
 
@@ -791,10 +814,45 @@ def inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat, chop_x = 3,
     -----------
     data object with n_stars injected with matced PSF
     """
+    
+    if grid == 1:
+        CHECK = np.sqrt(n_stars)
+        if (CHECK).is_integer():
+            del CHECK
+        else:
+            raise ValueError('When plotting on a fixed grid, injected stars must be a perfect square')
 
 
+    if grid == 2 or grid == 4 or grid == 5:
+        n_stars = len(x_p) 
+
+    
     image_dat = fits.getdata(image)
+    dat = image_dat.byteswap().newbyteorder()
+    bkg = sep.Background(dat)
+    dat = dat - bkg
+    fits.writeto('TMP_FLUX.fits', dat, overwrite = True)
+    
+
     Y_s, X_s = image_dat.shape #data shape
+
+    if grid == 4 or grid ==5:
+        image_dat = np.zeros((Y_s, X_s))
+        if grid == 5:
+            image_dat = add_noise(image_dat)
+
+    if grid == 3:
+        image_dat = np.zeros((Y_s, X_s))
+        talk = [sex ,'TMP_FLUX.fits','-c',root_config+'/r_psf.sex' , '-CATALOG_NAME' , 'SEX.cat',
+                '-PARAMETERS_NAME', root_config+'/r_psf.param', 
+                '-FILTER_NAME', root_config+'/r_psf.conv'
+                ]
+        subprocess.call(talk)
+        L = open('SEX.cat', 'r').readlines()
+        if n_stars > 0:
+            print('grid = 3 overwriting n_stars with '+str(len(L))+' injections')
+        n_stars = len(L)
+
     if write_cat == True:
         CAT = open('injection.cat', 'w')
 
@@ -819,13 +877,42 @@ def inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat, chop_x = 3,
 
     for stars in range(n_stars):
 
-        if isinstance(flux_dist, int) == True:
+        if grid == 3:
+            flux = int(math.ceil(float(L[stars].split()[5])))
+            X_in = int(math.floor(float(L[stars].split()[0])))
+            Y_in = int(math.floor(float(L[stars].split()[1])))
+            
+            #### There definitley a neater way to do this
+            #### But the program crashes here if I do it
+            #### any other way. So here's all the if
+            #### statements :) 
+            if X_in > 80 and X_in < (X_s - 80):
+                if Y_in > 80 and Y_in < (Y_s - 80):
+                    A_blank_variable = 0
+                else:
+                    continue
+            else:
+                continue
+           #TODO : ^^make this tidy^^
+
+        elif isinstance(flux_dist, int) == True:
             flux = flux_dist
+
         else:
             flux = sample_flux(flux_dist)
- 
-        X_in = np.random.randint(80, X_s-80)
-        Y_in = np.random.randint(80, Y_s-80)
+
+        if grid == 5:
+           flux += np.sqrt(flux) #photon noise due to flux
+
+        if grid == 0:
+            X_in = np.random.randint(80, X_s-80)
+            Y_in = np.random.randint(80, Y_s-80)
+        elif grid == 1:
+            X_in, Y_in = get_grid_pos(n_stars, stars, X_s, Y_s)
+        elif grid == 2 or grid == 4 or grid == 5:
+            X_in = x_p[stars]
+            Y_in = y_p[stars]
+
 
         if PSF_mod == 0:
             for i in range(chop_x):
@@ -862,26 +949,13 @@ def inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat, chop_x = 3,
         else:
             raise ValueError('Only three models \n PSF_mod = 0, basic bivariate Guassian \n PSF_mod = 1, PSFex model \n PSF_mod = 3, Zernike Moments model')
 
+
+
+
+    if grid == 3:
+        subprocess.call(['rm', 'TMP_FLUX.fits', 'SEX.cat'])
+ 
     return(image_dat)
-	
-
-def inject(image, n_stars, PSF_mod, out_name='inject.fits', flux_dist = 9000, chop_x = 3, chop_y = 3, overwrite = False , write_cat = True):
-    """
-    Ryan Cutter 2019
-
-    Takes a fits file and injects n_stars into it
-    Uses either: bivariate guassian     (PSF_mod = 0)
-                 psfex model            (PSF_mod = 1)
-                 Zernkie moments model  (PSF_mod = 3)
-    """
-    if PSF_mod == 0:
-        image_dat = inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat, chop_x, chop_y)
-    else:
-        image_dat = inject_fake_stars(image, n_stars, flux_dist, PSF_mod, write_cat)
-
-    fits.writeto(out_name, image_dat, overwrite = overwrite)
-
-    return(None)
 
 
 def write_mag(exp_time=30, pix_size=1.24):
@@ -914,10 +988,43 @@ def write_mag(exp_time=30, pix_size=1.24):
 
 
 
- 
+def inject(image, n_stars, PSF_mod, grid = 0, out_name='inject.fits', flux_dist = 9000, chop_x = 3, chop_y = 3, overwrite = False , write_cat = True, x_p=-1, y_p=-1):
+    """
+    Ryan Cutter 2019
+
+    Takes a fits file and injects n_stars into it
+    Uses either: bivariate guassian     (PSF_mod = 0)
+                 psfex model            (PSF_mod = 1)
+                 Zernkie moments model  (PSF_mod = 3)
+    """
+    if grid > 5: 
+        raise ValueError('Grid can be:\n 0 = random injection postions \n 1 = Fixed grid postitons across the CCD \n 2 = Pick your own positions'  
+                          '\n 3 = Copy positions from fits file to noisless fits \n 4 = pick your own positions empty grid  \n 5 = pick your own positions with fake noise grid')
+
+    if grid == 4 or grid == 2 or grid == 5:
+        if type(x_p) is int and type(y_p) is int: 
+             raise ValueError('grid = 2, 4 or 5 \n requires you to give x and y positions (x_p = [x1,x2,x3], y_p=[y1,y2,y3])')
+        else: 
+            try:
+                X = len(x_p)
+                Y = len(y_p)
+                if X != Y:
+                    raise ValueError('x_p and y_p must be the same length')
+            except:
+                raise ValueError('x_p and y_p must be a tuple ')
 
 
+    if PSF_mod == 0:
+        image_dat = inject_fake_stars(image, n_stars, grid, flux_dist, PSF_mod, write_cat, x_p, y_p, chop_x, chop_y)
+    else:
+        image_dat = inject_fake_stars(image, n_stars, grid, flux_dist, PSF_mod, write_cat, x_p, y_p)
 
+    fits.writeto(out_name, image_dat, overwrite = overwrite)
+
+    if PSF_mod == 1:
+        subprocess.call(['rm', image.replace('.fits','_PSFCAT.psf'), image.replace('.fits','.psfexcat'), image.replace('.fits','_PSFCAT.fits')])  
+
+    return(None)
 
 
 
