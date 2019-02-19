@@ -8,7 +8,7 @@ inject(fits_file, number_of_stars, PSF_mod, grid = 0, out_name='inject.fits', fl
 
 * grid = 0 - random injections on input image
 * grid = 1 - evenly spaced injections across input image
-* grid = 2 - Inject in chose positions (x_p =[x1,x2,x3] y_p=[y1,y2,y3])
+* grid = 2 - Inject in chosen positions (x_p =[x1,x2,x3] y_p=[y1,y2,y3])
 * grid = 3 - replicate input image with no noise
 * grid = 4 - Pick your own postions no noise
 * grid = 5 - Pick your own posotions fake noise 
