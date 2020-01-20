@@ -46,7 +46,7 @@ def add_noise(image):
 
 def get_med_pos(image):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
  
     Finds the median FWHM and extracts the co-ords 
     of that source. 
@@ -123,7 +123,7 @@ import matplotlib.pyplot as plt
 
 def zernike_reconstruct(img, radius, D, cof):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
     Reproduces the input image using Zernkie 
     polynomials and Zernike moments
@@ -182,7 +182,7 @@ def zernike_reconstruct(img, radius, D, cof):
 
 def ZM_PSF(im_name, cut_size=50):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
     Using Zernike moments finds
     the median PSF for an image
@@ -229,7 +229,7 @@ def ZM_inj(PSF, flux, data):
 
 def FWHM_shape(cat, im_dat, chop_x= 3, chop_y= 3):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
     Returns FWHM at different points on the CCD
     """
@@ -261,7 +261,7 @@ def FWHM_shape(cat, im_dat, chop_x= 3, chop_y= 3):
 
 def source_model(bb, flux, FWHM, data, ELON=0, Theta=90):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
 
     Inject a fake source into data. Assuming the data has the same
@@ -353,7 +353,7 @@ def source_model(bb, flux, FWHM, data, ELON=0, Theta=90):
 
 def PSF_kern(image, chunk=50):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
     Makes a Guassian kernel for a given image
     """
@@ -474,7 +474,7 @@ def get_psf(image):
 
 def psf_map(dat, header, const, xl, yl, xc, yc, slices):
     """
-    Ryan Cutter 2018 (copied from zogyp)
+    Ry Cutter 2018 (copied from zogyp)
 
     Maps the PSF data to a kernel for convolution
     """
@@ -526,7 +526,7 @@ def psf_map(dat, header, const, xl, yl, xc, yc, slices):
 
 def PSF_kern2(image, clean_psf = 0.25):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
     Compiles the two principal functions to return a PSF kernel
 
@@ -608,7 +608,7 @@ def psfex_source_model(flux, dat, header, const, xc, yc, DATA):
 
 def inject_fake_source(flux, image_dat, PSF_mod, X, Y, FWHM = 0, ELON=0, Theta = 0, cut_size=80, PSF_dat = 0):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
     Using the source characteristics (FWHM, Theta, and Elon)
     Inject a fake source into image with flux at position
@@ -659,7 +659,7 @@ def inject_fake_source(flux, image_dat, PSF_mod, X, Y, FWHM = 0, ELON=0, Theta =
 
 def get_flux_dist(image):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
     
     This function takes the input data 
     and creates a flux distribution
@@ -725,7 +725,7 @@ def get_flux_dist(image):
     
 def mag_dist(mag_l, mag_u, exp_time=30, pix_size=1.24):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
     
     This function creates a uniform distribution 
     based on the mag limits and given
@@ -755,7 +755,7 @@ def mag_dist(mag_l, mag_u, exp_time=30, pix_size=1.24):
 
 def sample_flux(dist):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
 
     Takes the distribtuion and selects a random value
@@ -787,7 +787,7 @@ def sample_flux(dist):
 
 def get_grid_pos(n_stars, stars, X_s, Y_s):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
     Returns injection co-ords for grid injections
     """
@@ -960,7 +960,7 @@ def inject_fake_stars(image, n_stars, grid, flux_dist, PSF_mod, write_cat, x_p, 
 
 def write_mag(exp_time=30, pix_size=1.24):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
 
     Takes the written flux catalog and will
@@ -990,7 +990,7 @@ def write_mag(exp_time=30, pix_size=1.24):
 
 def inject(image, n_stars, PSF_mod, grid = 0, out_name='inject.fits', flux_dist = 9000, chop_x = 3, chop_y = 3, overwrite = False , write_cat = True, x_p=-1, y_p=-1):
     """
-    Ryan Cutter 2019
+    Ry Cutter 2019
 
     Takes a fits file and injects n_stars into it
     Uses either: bivariate guassian     (PSF_mod = 0)
