@@ -1,11 +1,11 @@
 from setuptools import setup
 
 setup(name='lazypsf',
-      version='3.0.1',
+      version='4.1.0',
       description='A code for modelling PSFs and injecting fake sources with given flux distributions',
       url= 'https://github.com/ryanc123/LazyPSF' ,
-      author='Ryan Cutter',
-      author_email='R.Cutter@wawrcik.ac.uk',
+      author='Ry Cutter',
+      author_email='R.Cutter@warwick.ac.uk',
       license='GNU',
       packages=['lazypsf'],
       package_data={'lazypsf': ['config/*.txt']},
