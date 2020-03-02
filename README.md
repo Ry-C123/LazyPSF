@@ -33,6 +33,6 @@ or a uniform distribution across mgnitudes
 ![Mag_dist](https://github.com/ryanc123/LazyPSF/blob/master/Tutorial/hist3.png)
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Ryan Cutter 
+Ry Cutter 
 V4.1.0 (21/01/2020)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
