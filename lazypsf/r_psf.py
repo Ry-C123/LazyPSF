@@ -742,7 +742,7 @@ def mag_dist(mag_l, mag_u, exp_time=30, pix_size=1.24):
     ### P = 10**(-mag/2.5) * exp_time * (pix_size)**2 * 8.79*10**9
 
     #print(F_u, F_l)
-    pix_size = pix_size*10**-3
+    pix_size = pix_size*10**-4
     mag_step = (mag_u - mag_l)/50.
     dist = np.zeros((50,2))
     for i in range(50):
@@ -971,7 +971,7 @@ def write_mag(exp_time=30, pix_size=1.24):
     re-writes catalog 
     """
 
-    pix_size = pix_size*10**-3
+    pix_size = pix_size*10**-4
     C =  8.79*10**9 / (exp_time * pix_size)
     new_cat = open('mags.cat', 'w')
     for lin in open('injection.cat', 'r'):
